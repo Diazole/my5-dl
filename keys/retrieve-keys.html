@@ -1,0 +1,4 @@
+<head>
+  <script src="https://player.akamaized.net/html5player/core/html5-c5-player.js"></script>
+  <script>fetch('https://player.akamaized.net/html5player/core/html5-c5-player.js').then((r) => r.text()).then((b) => { const dfnm = /\x72\x65\x74\x75\x72\x6e\x20\x74\x79\x70\x65\x6f\x66\x20([a-z0-9]+)\[(\d+)\]\.([a-z0-9]+)\x20\x3d\x3d\x3d\x20\x27\x66\x75\x6e\x63\x74\x69\x6f\x6e\x27/gi.exec(b); const krm = /\x27\\x68\x27:[a-z0-9]+\.[a-z0-9]+\((\d+)\),'\\x61':[a-z0-9]+\.[a-z0-9]+\((\d+)\)/gi.exec(b); document.write(JSON.stringify({ HMAC_SECRET: window[dfnm[1]][dfnm[2]][dfnm[3]](krm[1]), AES_KEY: window[dfnm[1]][dfnm[2]][dfnm[3]](krm[2]), })); });</script>
+</head>
