@@ -76,7 +76,13 @@ def get_content_info(episode_url: str) -> str:
             print("[!] Episode is not available")
             return
 
-        return resp["id"], resp["sea_num"], resp["sh_title"], resp["title"]
+        return (
+            resp["id"],
+            resp["sea_num"],
+            str(resp["ep_num"]),
+            resp["sh_title"],
+            resp["title"],
+        )
     except Exception as ex:
         print(f"[!] Exception thrown when attempting to get the content ID: {ex}")
         raise
@@ -170,7 +176,7 @@ def get_pssh_from_mpd(mpd: str):
             )
             return
 
-        return re.findall("<cenc:pssh>(.*?)<\/cenc:pssh>", r.text)[1]
+        return re.findall(r"<cenc:pssh>(.*?)</cenc:pssh>", r.text)[1]
     except Exception as ex:
         print(f"[!] Exception thrown when attempting to get the content ID: {ex}")
         raise
@@ -274,8 +280,9 @@ def decrypt_streams(decryption_key: str, output_title: str) -> list:
 
 def merge_streams(
     files: list,
-    show_name: str,
+    show_title: str,
     season_number: str,
+    episode_number: str,
     episode_title: str,
     subtitles_url: str,
     dl_subtitles: bool,
@@ -283,21 +290,41 @@ def merge_streams(
     try:
         print("[*] Merging streams...")
 
+        date_regex = r"(monday|tuesday|wednesday|thursday|friday) \d{0,2} (january|february|march|april|may|june|july|august|september|october|november|december)"
+        if re.match(date_regex, episode_title, re.I):
+            episode_title = ""
+
+        if season_number is None:
+            season_number = "01"
         if len(season_number) == 1:
             season_number = f"0{season_number}"
+        if len(episode_number) == 1:
+            episode_number = f"0{episode_number}"
 
         if "Episode " in episode_title:
-            episode_title = episode_title[8:]
-            if len(episode_title) == 1:
-                episode_title = f"0{episode_title}"
+            if len(show_title.split(":")) == 2:
+                episode_title = show_title.split(":")[1]
+            else:
+                episode_title = ""
 
-        filename = " ".join(
-            f"{show_name} S{season_number}E{episode_title}".split()
-        ).replace(" ", ".")
-        output_dir = f"{DOWNLOAD_DIR}/{safe_name(show_name.split(':')[0].strip())}/S{safe_name(season_number)}/"
-        output_file = f"{output_dir}/{safe_name(filename)}"
+        season_number = f"S{season_number}"
+        episode_number = f"E{episode_number}"
 
+        if len(episode_title.split(":")) == 2:
+            episode_title = episode_title.split(":")[1]
+
+        if show_title == episode_title or (
+            len(show_title.split(":")) == 2
+            and show_title.split(":")[1] in episode_title
+        ):
+            episode_title = ""
+
+        output_dir = f"{DOWNLOAD_DIR}/{safe_name(show_title)}"
         os.makedirs(output_dir, exist_ok=True)
+
+        output_dir += " ".join(
+            f"/{safe_name(show_title)} {season_number}{episode_number} {episode_title}".split()
+        ).replace(" ", ".")
 
         mp4_decrypt = "ffmpeg"
         if USE_BIN_DIR:
@@ -314,7 +341,7 @@ def merge_streams(
             files[1],
             "-c",
             "copy",
-            f"{output_file}.mp4",
+            f"{output_dir}.mp4",
         ]
         subprocess.run(args, check=True)
 
@@ -326,7 +353,7 @@ def merge_streams(
                     print("[*] Subtitles are not available")
                     return
 
-                with open(f"{output_file}.vtt", mode="wb") as file:
+                with open(f"{output_dir}.vtt", mode="wb") as file:
                     file.write(resp.content)
             except Exception as ex:
                 print(
@@ -336,6 +363,7 @@ def merge_streams(
     except:
         print("[!] Failed merging streams")
         raise
+
 
 def check_required_config_values() -> None:
     lets_go = True
@@ -353,6 +381,7 @@ def check_required_config_values() -> None:
     if not lets_go:
         sys.exit(1)
 
+
 def create_argument_parser():
     parser = argparse.ArgumentParser(description="Channel 5 downloader.")
     parser.add_argument(
@@ -368,10 +397,7 @@ def create_argument_parser():
         action="store_true",
     )
     parser.add_argument(
-        "--url",
-        "-u",
-        help="The URL of the episode to download",
-        required=True
+        "--url", "-u", help="The URL of the episode to download", required=True
     )
     args = parser.parse_args()
 
@@ -388,7 +414,6 @@ def main():
     dl_video = parser.download
     dl_subtitles = parser.subtitles
 
-
     # Generate the episode URL
     episode_url = generate_episode_url(url)
     if episode_url is None:
@@ -396,7 +421,13 @@ def main():
         sys.exit(1)
 
     # Get the C5 content ID by parsing the reponse of the episode URL
-    content_id, season_number, show_title, episode_title = get_content_info(episode_url)
+    (
+        content_id,
+        season_number,
+        episode_number,
+        show_title,
+        episode_title,
+    ) = get_content_info(episode_url)
     if content_id is None:
         print("[!] Failed to get the content ID")
         sys.exit(1)
@@ -424,6 +455,7 @@ def main():
             decrypted_file_names,
             show_title,
             season_number,
+            episode_number,
             episode_title,
             subtitles_url,
             dl_subtitles,
