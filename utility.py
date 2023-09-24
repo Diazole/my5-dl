@@ -37,6 +37,7 @@ def safe_name(val: str) -> str:
         (r"\?", ""),
         (r"\*", ""),
         (r"\"", ""),
+        (r",", ""),
     ]
     for pattern, repl in replacements:
         val = re.sub(pattern, repl, val, 0)
