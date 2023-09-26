@@ -138,13 +138,15 @@ def get_first_rendition(decrypted_content: str) -> None:
             print_with_asterisk("[LICENSE URL]", asset["keyserver"])
 
             mpd = urlparse(asset["renditions"][0]["url"])
-            content_id = decrypted_content["id"]
 
             mpd_split = mpd.path.split("/")
-            mpd_filename = mpd_split[len(mpd_split)-1]
+            mpd_filename = mpd_split[len(mpd_split) - 1]
+            stripped_filename = mpd_filename.split("_")[0].split("-")[0]
 
-            default_mpd = mpd.geturl().replace(mpd_filename, f"{content_id}.mpd")
-            subtitles_mpd = mpd.geturl().replace(mpd_filename, f"{content_id}_subtitles.mpd")
+            default_mpd = mpd.geturl().replace(mpd_filename, f"{stripped_filename}.mpd")
+            subtitles_mpd = mpd.geturl().replace(
+                mpd_filename, f"{stripped_filename}_subtitles.mpd"
+            )
 
             print_with_asterisk("[MPD URL]", default_mpd)
             print_with_asterisk("[SUBTITLES URL]", subtitles_mpd)
